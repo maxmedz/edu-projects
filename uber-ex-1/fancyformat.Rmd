@@ -1,0 +1,97 @@
+---
+title: "Uber exercise"
+author: "MM"
+date: "`r Sys.Date()`"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Uber exericise
+
+Below is the exercise from StrataScratch easy section. Now I am just having fun working the MarkDown fancy file
+
+## Downloading packages and reading the dataset:
+```{r, echo=TRUE,results = "hide",message=FALSE,warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(zoo)
+x<-read.csv('Data/dataset_1.csv')
+```
+## Throwing a look
+As we can see, weirdly  we have dates in a format as if we used the pivot table to create a dataset which will complicate our life later.
+```{r, eval=TRUE, echo=FALSE,message=FALSE,warning=FALSE}
+glimpse(x)
+head(x,30)
+```
+## Data cleaning
+Indeed, we will have to do some data cleaning to adjust the format such a way it is easier to work with the dates. We will need each observation have its own date.
+
+First, I will do it my own artisanal way using loops I learnt at school
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+for (i in 2:nrow(x)) {  
+  if (x$Date[i]=='') {  
+    x$Date[i] <- x$Date[i - 1]  
+  }
+}
+```
+And as we can see, such an approach works very well
+```{r, eval=TRUE, echo=FALSE,message=FALSE,warning=FALSE}
+head(x,30)
+```
+Still, chatgpt offered me 2 other options :
+
+**Step 1. Create a vector of T&F whether the cell is empty or not**
+```{r, results = "hide", echo=FALSE,message=FALSE,warning=FALSE}
+x<-read.csv('Data/dataset_1.csv')
+```
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+x$Date==""
+```
+**Step 2. Take all the observations where the value is T and convert them in NA**
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+x$Date[x$Date == ""] <- NA
+```
+**Step 3. Fancy function to fill all the NA with the previous values a.k.a. forward filling**
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+x$Date <- na.locf(x$Date, na.rm = FALSE)
+```
+As a result, the same output
+```{r, eval=TRUE, echo=FALSE,message=FALSE,warning=FALSE}
+head(x,30)
+```
+# And Now we are good to do the exercise
+## Exercise 1 : Which date had the most completed trips during the two week period?
+Let's first check if the overall time period is 2-weeks:
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+min(x$Date)
+max(x$Date)
+```
+Indeed, the period is 14 days as expected.
+**Since we will potentially need working with grouped data let's create the dataset**
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+daily_rides<-x%>%
+  group_by(Date)%>%
+  summarise(
+    completed_trips=sum(Completed.Trips,na.rm=TRUE),
+    requests=sum(Requests,na.rm=TRUE),
+    active_hours=n()
+  )
+# and select the date we need
+filter(daily_rides,completed_trips==max(completed_trips))%>%
+  select(Date,completed_trips)
+```
+Nice, now we know that there is been the most trips on 22nd September.
+### However,  there is the smarter way to do that. 
+And it is offered by **me** and suggest just executing one requests without creating any additional datasets
+```{r, eval=TRUE, echo=TRUE,message=FALSE,warning=FALSE}
+x%>%
+  group_by(Date)%>%
+  summarise(
+    completed_trips=sum(Completed.Trips,na.rm=TRUE),
+  )%>%
+  filter(completed_trips==max(completed_trips))%>%
+  select(Date,completed_trips)
+```
